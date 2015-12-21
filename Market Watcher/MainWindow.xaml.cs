@@ -285,37 +285,11 @@ namespace Market_Watcher
         {
             if (watching)
             {
-                intervalTimer.Stop();
-
-                watchBtn.Content = "Start Watching";
-
-                dataCollection = new JObject();
-
-                urlTB.IsEnabled = true;
-                intervalTB.IsEnabled = true;
-                priceTB.IsEnabled = true;
-
-                watching = false;
+                stopWatch();
             }
             else
             {
-                tConsole("URL set to: " + urlTB.Text);
-                tConsole("Interval set to: " + intervalTB.Text);
-                tConsole("Price set to: " + priceTB.Text);
-                lfp = Convert.ToDouble(priceTB.Text);
-                marketURL = urlTB.Text;
-                interval = Convert.ToInt32(intervalTB.Text);
-
-                urlTB.IsEnabled = false;
-                intervalTB.IsEnabled = false;
-                priceTB.IsEnabled = false;
-
-                watchBtn.Content = "Stop Watching";
-
-                intervalTimer.Interval = TimeSpan.FromSeconds(interval);
-                intervalTimer.Tick += intervalTimer_Tick;
-                intervalTimer.Start();
-                watching = true;
+                startWatch();
             }
         }
 
@@ -329,14 +303,16 @@ namespace Market_Watcher
             }
             catch
             {
-                watchBtn.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+                stopWatch();
                 MessageBox.Show("Watching stopped due to steam error. Most likely caused by sending too many requests in too little time.");
                 return;
             }
             double avg = 0;
             double median = 0;
             double low = 0;
+            double high = 0;
             int count = 0;
+            int countT = 0;
             //Create average
             foreach (var val in jsonData["prices"])
             {
@@ -346,9 +322,10 @@ namespace Market_Watcher
                     avg += price;
                     count++;
                 }
+                countT++;
             }
             //Get real low
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < countT; i++)
             {
                 if ((double)jsonData["prices"][i] != 0)
                 {
@@ -356,7 +333,17 @@ namespace Market_Watcher
                     break;
                 }
             }
-            double high = (double)jsonData["prices"][count - 1];
+            //Geat real high
+            for (int i = 0; i < countT; i++)
+            {
+                if ((double)jsonData["prices"][i] != 0)
+                {
+                    if ((double)jsonData["prices"][i] > high)
+                    {
+                        high = (double)jsonData["prices"][i];
+                    }
+                }
+            }
             avg = avg / count;
             int medval = (int)(Math.Ceiling((decimal)(count / 2)));
             median = ((double)jsonData["prices"][medval]);
@@ -372,6 +359,7 @@ namespace Market_Watcher
             dcContent["average"] = avg;
             dcContent["median"] = median;
             dcContent["count"] = count;
+            dcContent["prices_raw"] = jsonData["prices"];
 
             //Add to data collection
             dataCollection[Convert.ToInt32((DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds).ToString()] = dcContent;
@@ -396,8 +384,44 @@ namespace Market_Watcher
                 item.Items.Add("Lowest: $" + string.Format("{0:0.00}", dataCollection[key]["low"]));
                 item.Items.Add("Average: $" + string.Format("{0:0.00}", dataCollection[key]["average"]));
                 item.Items.Add("Median: $" + string.Format("{0:0.00}", dataCollection[key]["median"]));
+                item.Items.Add("Raw: " + dataCollection[key].ToString());
                 dcTv.Items.Add(item);
             }
+        }
+
+        void stopWatch()
+        {
+            intervalTimer.Stop();
+
+            watchBtn.Content = "Start Watching";
+
+            dataCollection = new JObject();
+
+            urlTB.IsEnabled = true;
+            intervalTB.IsEnabled = true;
+            priceTB.IsEnabled = true;
+
+            watching = false;
+        }
+        void startWatch()
+        {
+            tConsole("URL set to: " + urlTB.Text);
+            tConsole("Interval set to: " + intervalTB.Text);
+            tConsole("Price set to: " + priceTB.Text);
+            lfp = Convert.ToDouble(priceTB.Text);
+            marketURL = urlTB.Text;
+            interval = Convert.ToInt32(intervalTB.Text);
+
+            urlTB.IsEnabled = false;
+            intervalTB.IsEnabled = false;
+            priceTB.IsEnabled = false;
+
+            watchBtn.Content = "Stop Watching";
+
+            intervalTimer.Interval = TimeSpan.FromSeconds(interval);
+            intervalTimer.Tick += intervalTimer_Tick;
+            intervalTimer.Start();
+            watching = true;
         }
     }
 }
