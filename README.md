@@ -1,5 +1,5 @@
 # Market-Watcher
-Watches a specified Stream Community Market page with a minimum frequency of 10 seconds.
+Watches a specified Steam Community Market page with a minimum frequency of 10 seconds.
 
 Reports a low/high for each fetch and also the average price and the median price.
 
